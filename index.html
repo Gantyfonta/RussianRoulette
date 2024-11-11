@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russian Roulette Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1b1b32;
+            color: #e0e0e0;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #ff6363;
+        }
+
+        .game-area {
+            font-size: 2em;
+            margin: 20px 0;
+            letter-spacing: 5px;
+        }
+
+        button {
+            background-color: #ff6363;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+
+        button:hover {
+            background-color: #ff4141;
+        }
+
+        input {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        .status {
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="loginContainer">
+        <h1>Sign Up / Log In</h1>
+        <input type="text" id="username" placeholder="Username"><br>
+        <input type="password" id="password" placeholder="Password"><br>
+        <button id="signUpBtn">Sign Up</button>
+        <button id="loginBtn">Log In</button>
+        <div id="loginMessage" class="status"></div>
+    </div>
+
+    <div class="container hidden" id="gameContainer">
+        <h1>Russian Roulette Game</h1>
+        <div class="game-area" id="gameArea">-🧑&nbsp;&nbsp;🧑-</div>
+        <div id="status" class="status">Press "Step" to start earning Cornish Bucks!</div>
+        <div>
+            <button id="stepBtn">Step</button>
+            <button id="shootBtn">Shoot</button>
+        </div>
+        <div class="result">
+            <p>Current Cornish Bucks: $<span id="currentBucks">0.00</span></p>
+            <p>Bank Balance: $<span id="bankBalance">0.00</span></p>
+            <p>Steps Taken: <span id="stepCount">0</span></p>
+            <p>High Score (Steps): <span id="highScore">0</span></p>
+        </div>
+        <button id="logoutBtn">Log Out</button>
+    </div>
+
+    <script>
+        // User Data Management
+        const users = JSON.parse(localStorage.getItem("users")) || {};
+
+        let currentUser = null;
+
+        // Game variables
+        let currentBucks = 0;
+        let bankBalance = 0;
+        const stepReward = 1.25;
+        const shootProbability = 0.5;
+        let spaces = 2;
+        let stepCount = 0;
+        let highScore = 0;
+
+        // Elements
+        const loginContainer = document.getElementById("loginContainer");
+        const gameContainer = document.getElementById("gameContainer");
+        const statusEl = document.getElementById("status");
+        const currentBucksEl = document.getElementById("currentBucks");
+        const bankBalanceEl = document.getElementById("bankBalance");
+        const gameAreaEl = document.getElementById("gameArea");
+        const stepCountEl = document.getElementById("stepCount");
+        const highScoreEl = document.getElementById("highScore");
+
+        const stepBtn = document.getElementById("stepBtn");
+        const shootBtn = document.getElementById("shootBtn");
+        const signUpBtn = document.getElementById("signUpBtn");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const loginMessageEl = document.getElementById("loginMessage");
+
+        // Handle User Signup
+        signUpBtn.addEventListener("click", () => {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            if (username && password) {
+                if (users[username]) {
+                    loginMessageEl.textContent = "Username already exists!";
+                } else {
+                    users[username] = { password, bankBalance: 0, highScore: 0 };
+                    localStorage.setItem("users", JSON.stringify(users));
+                    loginMessageEl.textContent = "Account created successfully!";
+                }
+            }
+        });
+
+        // Handle User Login
+        loginBtn.addEventListener("click", () => {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            if (users[username] && users[username].password === password) {
+                currentUser = username;
+                bankBalance = users[username].bankBalance;
+                highScore = users[username].highScore;
+                switchToGame();
+            } else {
+                loginMessageEl.textContent = "Invalid username or password!";
+            }
+        });
+
+        // Switch to game view
+        function switchToGame() {
+            loginContainer.classList.add("hidden");
+            gameContainer.classList.remove("hidden");
+            updateDisplay();
+        }
+
+        // Step button logic
+        stepBtn.addEventListener("click", () => {
+            if (Math.random() < shootProbability) {
+                statusEl.textContent = "Oh no! You got shot. You lost all your Cornish Bucks!";
+                updateHighScore();
+                resetGame();
+            } else {
+                currentBucks += stepReward;
+                stepCount++;
+                statusEl.textContent = "You took a step! Keep going or shoot the bot.";
+                spaces += 2;
+                updateDisplay();
+            }
+        });
+
+        // Shoot button logic
+        shootBtn.addEventListener("click", () => {
+            bankBalance += currentBucks;
+            updateHighScore();
+            resetGame();
+        });
+
+        // Function to update high score
+        function updateHighScore() {
+            if (stepCount > highScore) {
+                highScore = stepCount;
+                users[currentUser].highScore = highScore;
+            }
+            users[currentUser].bankBalance = bankBalance;
+            localStorage.setItem("users", JSON.stringify(users));
+        }
+
+        // Reset the game
+        function resetGame() {
+            currentBucks = 0;
+            stepCount = 0;
+            spaces = 2;
+            updateDisplay();
+        }
+
+        // Function to update the display
+        function updateDisplay() {
+            currentBucksEl.textContent = currentBucks.toFixed(2);
+            bankBalanceEl.textContent = bankBalance.toFixed(2);
+            gameAreaEl.innerHTML = `-🧑${"&nbsp;".repeat(spaces)}🧑-`;
+            stepCountEl.textContent = stepCount;
+            highScoreEl.textContent = highScore;
+        }
+
+        // Logout button
+        logoutBtn.addEventListener("click", () => {
+            currentUser = null;
+            gameContainer.classList.add("hidden");
+            loginContainer.classList.remove("hidden");
+        });
+    </script>
+</body>
+
+</html>
